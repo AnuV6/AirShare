@@ -2,7 +2,7 @@
 
 **Air Share** is a high-speed, local file-sharing application designed for the modern web. Share files securely between your computer and mobile devices over your local WiFi network—no internet required.
 
-![Air Share](/icon.png)
+![Air Share](https://github.com/user-attachments/assets/3b963da5-fc27-48e9-93ff-6cdb646f9a7d)
 
 ## ✨ Features
 
