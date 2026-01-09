@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
         if (fs.existsSync(UPLOAD_DIR)) {
             const files = fs.readdirSync(UPLOAD_DIR);
             for (const file of files) {
+                if (file === 'chunks') continue; // Skip chunks directory
                 // safely remove files
                 try {
                     fs.unlinkSync(path.join(UPLOAD_DIR, file));
