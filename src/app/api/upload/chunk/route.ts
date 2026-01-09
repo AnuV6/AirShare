@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        fs.writeFileSync(chunkPath, buffer);
+        await fs.promises.writeFile(chunkPath, buffer);
 
         return NextResponse.json({ success: true });
     } catch (error) {

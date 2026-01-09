@@ -29,38 +29,66 @@ export default function Dashboard({ ipAddress }: { ipAddress: string }) {
         return () => clearInterval(interval);
     }, []);
 
-    // Wake Lock Logic
+    // Wake Lock & Background Keep-Alive Logic
     useEffect(() => {
         const isUploading = uploads.some(u => u.status === 'uploading');
+        let audio: HTMLAudioElement | null = null;
 
+        // 1. Screen Wake Lock
         const requestWakeLock = async () => {
             if ('wakeLock' in navigator && !wakeLock) {
                 try {
                     const lock = await navigator.wakeLock.request('screen');
                     setWakeLock(lock);
-                    console.log('Wake Lock active');
-                } catch (err) {
-                    console.error('Wake Lock rejected', err);
-                }
+                } catch (err) { console.error('Wake Lock rejected', err); }
             }
         };
 
-        const releaseWakeLock = async () => {
-            if (wakeLock) {
-                await wakeLock.release();
-                setWakeLock(null);
-                console.log('Wake Lock released');
-            }
-        };
+        // 2. Silent Audio Hack (keeps background thread alive)
+        // Tiny silent MP3
+        const silentMp3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAAAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA';
 
         if (isUploading) {
             requestWakeLock();
+
+            // Start silent audio
+            audio = new Audio(silentMp3);
+            audio.loop = true;
+            audio.volume = 0.01; // Just non-zero
+            audio.play().catch(() => { }); // Autoplay rules might block, but user interaction (upload click) usually allows it
         } else {
-            releaseWakeLock();
+            if (wakeLock) {
+                wakeLock.release().catch(() => { });
+                setWakeLock(null);
+            }
         }
 
-        return () => { releaseWakeLock(); };
-    }, [uploads, wakeLock]);
+        return () => {
+            if (wakeLock) wakeLock.release().catch(() => { });
+            if (audio) {
+                audio.pause();
+                audio.src = '';
+            }
+        };
+    }, [uploads.map(u => u.status).join(',')]); // Re-run when status changes
+
+    // Network Status Auto-Resume
+    useEffect(() => {
+        const handleOnline = () => {
+            console.log('Online detected, resuming uploads...');
+            uploads.forEach(u => {
+                if (u.status === 'error' || u.status === 'paused') {
+                    // Only resume if it wasn't manually paused? 
+                    // For now, let's just resume errors or paused. 
+                    // Actually, let's just retry errors.
+                    if (u.status === 'error') u.resume();
+                }
+            });
+        };
+
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, [uploads]);
 
     const fetchFiles = async () => {
         try {
@@ -228,6 +256,25 @@ export default function Dashboard({ ipAddress }: { ipAddress: string }) {
                         <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
                             <FileDown className="w-5 h-5 text-green-400" /> Available Files
                         </h3>
+                        <button
+                            onClick={async () => {
+                                if (confirm('Clear all files and temporary chunks?')) {
+                                    try {
+                                        const res = await fetch('/api/admin/cleanup', { method: 'POST' });
+                                        if (res.ok) {
+                                            fetchFiles();
+                                            alert('Storage cleared');
+                                        }
+                                    } catch (e) {
+                                        alert('Failed to clear storage');
+                                    }
+                                }
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 absolute top-6 right-6"
+                        >
+                            <Trash2 className="w-3 h-3" /> Clear Storage
+                        </button>
+
                         <div className="space-y-2">
                             {files.length === 0 ? (
                                 <p className="text-center text-gray-500 py-8">No files shared yet</p>

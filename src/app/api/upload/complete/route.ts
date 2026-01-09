@@ -23,20 +23,30 @@ export async function POST(req: NextRequest) {
         const tempFilePath = finalFilePath + '.tmp';
 
         // Create/Clear the temp file first
-        fs.writeFileSync(tempFilePath, '');
+        await fs.promises.writeFile(tempFilePath, '');
 
-        // Append chunks sequentially using synchronous operations for maximum stability/safety on Windows
+        // Use streams for merging to prevent memory overload with large files
+        const writeStream = fs.createWriteStream(tempFilePath);
+
         for (let i = 0; i < totalChunks; i++) {
             const chunkPath = path.join(currentChunkDir, i.toString());
 
             if (!fs.existsSync(chunkPath)) {
-                try { fs.unlinkSync(tempFilePath); } catch (e) { }
+                writeStream.destroy();
+                try { await fs.promises.unlink(tempFilePath); } catch (e) { }
                 throw new Error(`Missing chunk ${i}`);
             }
 
-            const data = fs.readFileSync(chunkPath);
-            fs.appendFileSync(tempFilePath, data);
+            await new Promise((resolve, reject) => {
+                const readStream = fs.createReadStream(chunkPath);
+                readStream.pipe(writeStream, { end: false });
+                readStream.on('end', () => resolve(null));
+                readStream.on('error', reject);
+            });
         }
+
+        writeStream.end();
+        await new Promise((resolve) => writeStream.on('finish', () => resolve(null)));
 
         // Verify size if provided
         if (body.fileSize) {

@@ -53,8 +53,8 @@ export class UploadTask {
 
         // Optimize settings based on device
         if (isMobile()) {
-            this.chunkSize = 5 * 1024 * 1024; // 5MB for even higher speed
-            this.concurrency = 3; // Safe to parallelize now that server is fixed
+            this.chunkSize = 10 * 1024 * 1024; // 10MB - Max requested capacity
+            this.concurrency = 3; // Reduced concurrency to prevent ECONNRESET
         } else {
             this.chunkSize = 10 * 1024 * 1024; // 10MB for desktop
             this.concurrency = 4;
@@ -182,12 +182,30 @@ export class UploadTask {
         formData.append('totalChunks', this.totalChunks.toString());
         formData.append('uploadId', this.uploadId);
 
-        const res = await fetch('/api/upload/chunk', {
-            method: 'POST',
-            body: formData,
-        });
+        let attempt = 0;
+        const maxRetries = 3;
 
-        if (!res.ok) throw new Error('Chunk upload failed');
+        while (attempt < maxRetries) {
+            try {
+                const res = await fetch('/api/upload/chunk', {
+                    method: 'POST',
+                    body: formData,
+                    // keepalive intentionally removed for large payloads
+                });
+
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return; // Success
+            } catch (e: any) {
+                attempt++;
+                console.warn(`Chunk ${index} failed (attempt ${attempt}/${maxRetries}):`, e);
+
+                if (attempt >= maxRetries) throw e;
+
+                // Exponential backoff: 1s, 2s, 4s...
+                const timeout = Math.pow(2, attempt - 1) * 1000;
+                await new Promise(r => setTimeout(r, timeout));
+            }
+        }
     }
 
     private async completeUpload() {
