@@ -53,11 +53,11 @@ export class UploadTask {
 
         // Optimize settings based on device
         if (isMobile()) {
-            this.chunkSize = 50 * 1024 * 1024; // 50MB - High throughput
-            this.concurrency = 3; // Reduced concurrency to prevent ECONNRESET
+            this.chunkSize = 100 * 1024 * 1024; // 100MB - High throughput for mobile
+            this.concurrency = 3;
         } else {
-            this.chunkSize = 50 * 1024 * 1024; // 50MB for desktop
-            this.concurrency = 5;
+            this.chunkSize = 250 * 1024 * 1024; // 250MB for desktop - significantly reduces request overhead for 10GB+ files
+            this.concurrency = 4;
         }
 
         this.totalChunks = Math.ceil(file.size / this.chunkSize);
