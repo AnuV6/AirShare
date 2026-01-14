@@ -18,7 +18,18 @@ export function getAllLocalIpAddresses(): NetworkInterface[] {
             }
         }
     }
-    return results;
+
+    // Sort to prioritize real LAN interfaces
+    return results.sort((a, b) => {
+        const priority = (name: string) => {
+            const n = name.toLowerCase();
+            if (n.includes('wi-fi') || n.includes('wifi')) return 2; // Top priority
+            if (n.includes('ethernet')) return 1; // Second priority
+            if (n.includes('virtual') || n.includes('vmware') || n.includes('vethernet') || n.includes('wsl')) return -1; // Low priority
+            return 0; // Neutral
+        };
+        return priority(b.name) - priority(a.name);
+    });
 }
 
 export function getLocalIpAddress() {

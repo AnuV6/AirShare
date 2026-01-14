@@ -21,6 +21,10 @@ export default function Home() {
         </header>
 
         <Dashboard ipAddresses={ipAddresses} />
+
+        <footer className="mt-16 text-center text-slate-500 text-sm">
+          <p>Developed by <span className="text-slate-400 font-medium hover:text-blue-400 transition-colors cursor-default">Anupa Dinuranga</span></p>
+        </footer>
       </div>
     </main>
   );
