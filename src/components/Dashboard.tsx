@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Chat } from './Chat';
 
+
 type FileItem = {
     name: string;
     size: number;
@@ -16,8 +17,14 @@ type FileItem = {
 
 type Tab = 'transfer' | 'chat';
 
-export default function Dashboard({ ipAddress }: { ipAddress: string }) {
+interface NetworkInterface {
+    name: string;
+    address: string;
+}
+
+export default function Dashboard({ ipAddresses }: { ipAddresses: NetworkInterface[] }) {
     const [files, setFiles] = useState<FileItem[]>([]);
+
     const [uploads, setUploads] = useState<UploadTask[]>([]);
     const [_, setTick] = useState(0);
     const [activeTab, setActiveTab] = useState<Tab>('transfer');
@@ -153,7 +160,7 @@ export default function Dashboard({ ipAddress }: { ipAddress: string }) {
 
     return (
         <div className="max-w-6xl mx-auto p-4 space-y-6">
-            <NetworkInfo ipAddress={ipAddress} />
+            <NetworkInfo ipAddresses={ipAddresses} />
 
             {/* Mobile Tab Switcher */}
             <div className="flex lg:hidden bg-white/10 p-1 rounded-xl mb-4 sticky top-4 z-10 backdrop-blur-md">

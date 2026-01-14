@@ -1,8 +1,8 @@
-import { getLocalIpAddress } from '@/lib/serverUtils';
+import { getAllLocalIpAddresses } from '@/lib/serverUtils';
 import Dashboard from '@/components/Dashboard';
 
 export default function Home() {
-  const ipAddress = getLocalIpAddress();
+  const ipAddresses = getAllLocalIpAddresses();
 
   return (
     <main className="min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
@@ -20,7 +20,7 @@ export default function Home() {
           </p>
         </header>
 
-        <Dashboard ipAddress={ipAddress} />
+        <Dashboard ipAddresses={ipAddresses} />
       </div>
     </main>
   );
